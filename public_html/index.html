@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Fast And Furious Burguer</title>
+        <link rel="stylesheet" href="./style/style.css"/>
+    </head>
+
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>🍽️ Fast And Furious Burguer</h1>
+                <p>Descubra nossos deliciosos Sanduiches e faça seu pedido!</p>
+                <!-- INÍCIO DA ALTERAÇÃO - Container de categorias -->
+                <div class="categories-container">
+                    <div id="categoriesLoading" class="category-loading">Carregando categorias...</div>
+                    <div class="categories-tabs" id="categoriesTabs" style="display: none;"></div>
+                </div>
+                <!-- FIM DA ALTERAÇÃO - Container de categorias -->
+            </div>
+
+
+            <button class="cart-button" onclick="openCart()">
+                🛒 Carrinho <span class="cart-count" id="cartCount">0</span>
+            </button>
+
+            <div id="loadingMessage" class="loading">
+                Carregando produtos...
+            </div>
+
+            <div id="errorMessage" class="error" style="display: none;"></div>
+
+            <div class="products-grid" id="productsGrid"></div>
+        </div>
+
+        <!-- Modal do Carrinho -->
+        <div id="cartModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span class="close" onclick="closeCart()">&times;</span>
+                    <h2>🛒 Seu Carrinho</h2>
+                </div>
+                <div class="modal-body">
+                    <div id="cartItems"></div>
+                    <div id="cartTotal" class="cart-total"></div>
+
+                    <div class="checkout-form" id="checkoutForm" style="display: none;">
+                        <h3 style="margin-bottom: 20px; color: #2c3e50;">Dados para Entrega</h3>
+                        <div class="form-group">
+                            <label for="customerName">Nome Completo:</label>
+                            <input type="text" id="customerName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="customerPhone">Telefone:</label>
+                            <input type="tel" id="customerPhone" required>
+                        </div>
+                        <button class="checkout-btn" onclick="makeOrder()">🚀 Fazer Pedido</button>
+                    </div>
+
+                    <button class="checkout-btn" id="checkoutBtn" onclick="showCheckoutForm()" style="display: none;">
+                        ✅ Checkout
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de Sucesso -->
+        <div id="successModal" class="modal success-modal">
+            <div class="modal-content">
+                <div class="success-icon">✅</div>
+                <h2>Pedido Realizado com Sucesso!</h2>
+                <div class="order-details" id="orderDetails"></div>
+                <button class="checkout-btn" onclick="closeSuccessModal()">Fechar</button>
+            </div>
+        </div>
+
+        <script>
+            let products = [];
+            let cart = [];
+
+            // Carregar produtos da API
+            async function loadProducts() {
+                try {
+                    const response = await fetch('http://localhost:8080/faf/produto');
+                    if (!response.ok) {
+                        throw new Error(`Erro HTTP: ${response.status}`);
+                    }
+                    products = await response.json();
+                    displayProducts();
+                    document.getElementById('loadingMessage').style.display = 'none';
+                } catch (error) {
+                    console.error('Erro ao carregar produtos:', error);
+                    document.getElementById('loadingMessage').style.display = 'none';
+                    document.getElementById('errorMessage').style.display = 'block';
+                    document.getElementById('errorMessage').innerHTML = `
+                        <h3>Erro ao carregar produtos</h3>
+                        <p>Não foi possível conectar à API. Verifique se o servidor está rodando em localhost:8080</p>
+                        <button onclick="loadProducts()" style="background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin-top: 15px;">Tentar Novamente</button>
+                    `;
+                }
+            }
+
+            // Exibir produtos na tela
+            function displayProducts() {
+                const grid = document.getElementById('productsGrid');
+                grid.innerHTML = '';
+
+                products.forEach(product => {
+                    const card = document.createElement('div');
+                    card.className = 'product-card';
+                    card.innerHTML = `
+                        <img src='${product.linkImagem}' alt='${product.nome}' class='product-image' />
+                        <div class="product-info">
+                            <div class="product-category">${product.categoria}</div>
+                            <h3 class="product-name">${product.nome}</h3>
+                            <p class="product-description">${product.descricao}</p>
+                            <div class="product-details">
+                                <span class="product-price">R$ ${parseFloat(product.preco).toFixed(2)}</span>
+                                <span class="product-time">⏱️ ${product.tempoPreparoMin} min</span>
+                            </div>
+                            <button class="add-to-cart-btn" onclick="addToCart(${product.id})">
+                                🛒 Adicionar ao Carrinho
+                            </button>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            }
+
+// Carregar categorias da API
+            async function loadCategories() {
+                try {
+                    const response = await fetch('http://localhost:8080/faf/produto/categoria');
+                    if (!response.ok) {
+                        throw new Error(`Erro HTTP: ${response.status}`);
+                    }
+                    categories = await response.json();
+                    displayCategories();
+                    document.getElementById('categoriesLoading').style.display = 'none';
+                    document.getElementById('categoriesTabs').style.display = 'flex';
+                } catch (error) {
+                    console.error('Erro ao carregar categorias:', error);
+                    document.getElementById('categoriesLoading').innerHTML = 'Erro ao carregar categorias';
+                }
+            }
+
+            // Exibir categorias no header
+            function displayCategories() {
+                const tabsContainer = document.getElementById('categoriesTabs');
+
+                // Adicionar aba "Todos"
+                const allTab = document.createElement('div');
+                allTab.className = 'category-tab active';
+                allTab.innerHTML = `
+                <span>🍽️</span>
+                <span>Todos</span>
+            `;
+                allTab.onclick = () => selectCategory('todos');
+                tabsContainer.appendChild(allTab);
+
+                // Adicionar abas das categorias
+                categories.forEach(category => {
+                    const tab = document.createElement('div');
+                    tab.className = 'category-tab';
+                    tab.innerHTML = `
+                    <img src="${category.linkImagem}" alt="${category.nome}" class="category-icon" onerror="this.style.display='none'">
+                    <span>${category.nome}</span>
+                `;
+                    tab.onclick = () => selectCategory(category.nome);
+                    tabsContainer.appendChild(tab);
+                });
+            }
+
+            // Selecionar categoria
+            async function selectCategory(categoryName) {
+                currentCategory = categoryName;
+
+                // Atualizar visual das abas
+                document.querySelectorAll('.category-tab').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                event.target.closest('.category-tab').classList.add('active');
+
+                // Mostrar loading
+                document.getElementById('loadingMessage').style.display = 'block';
+                document.getElementById('errorMessage').style.display = 'none';
+
+                try {
+                    if (categoryName === 'todos') {
+                        // Carregar todos os produtos
+                        const response = await fetch('http://localhost:8080/produto');
+                        if (!response.ok) {
+                            throw new Error(`Erro HTTP: ${response.status}`);
+                        }
+                        products = await response.json();
+                    } else {
+                        // Carregar produtos por categoria
+                        const response = await fetch(`http://localhost:8080/produto/cat/${encodeURIComponent(categoryName)}`);
+                        if (!response.ok) {
+                            throw new Error(`Erro HTTP: ${response.status}`);
+                        }
+                        products = await response.json();
+                    }
+
+                    displayProducts();
+                    document.getElementById('loadingMessage').style.display = 'none';
+                } catch (error) {
+                    console.error('Erro ao carregar produtos da categoria:', error);
+                    document.getElementById('loadingMessage').style.display = 'none';
+                    document.getElementById('errorMessage').style.display = 'block';
+                    document.getElementById('errorMessage').innerHTML = `
+                    <h3>Erro ao carregar produtos</h3>
+                    <p>Não foi possível carregar os produtos da categoria "${categoryName}"</p>
+                    <button onclick="selectCategory('${categoryName}')" style="background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin-top: 15px;">Tentar Novamente</button>
+                `;
+                }
+            }
+            /* FIM DA ALTERAÇÃO - Funções para categorias */
+
+            // Adicionar produto ao carrinho
+            function addToCart(productId) {
+                const product = products.find(p => p.id === productId);
+                const existingItem = cart.find(item => item.produtoId === productId);
+
+                if (existingItem) {
+                    existingItem.quantidade++;
+                } else {
+                    cart.push({
+                        produtoId: productId,
+                        produto: product,
+                        quantidade: 1,
+                        observacao: ''
+                    });
+                }
+
+                updateCartCount();
+
+                // Animação do botão
+                const button = event.target;
+                const originalText = button.innerHTML;
+                button.innerHTML = '✅ Adicionado!';
+                button.style.background = '#27ae60';
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.style.background = 'linear-gradient(45deg, #ff6b6b, #ee5a24)';
+                }, 1000);
+            }
+
+            // Atualizar contador do carrinho
+            function updateCartCount() {
+                const count = cart.reduce((total, item) => total + item.quantidade, 0);
+                document.getElementById('cartCount').textContent = count;
+            }
+
+            // Abrir modal do carrinho
+            function openCart() {
+                displayCartItems();
+                document.getElementById('cartModal').style.display = 'block';
+            }
+
+            // Fechar modal do carrinho
+            function closeCart() {
+                document.getElementById('cartModal').style.display = 'none';
+                document.getElementById('checkoutForm').style.display = 'none';
+                document.getElementById('checkoutBtn').style.display = cart.length > 0 ? 'block' : 'none';
+            }
+
+            // Exibir itens do carrinho
+            function displayCartItems() {
+                const cartItemsDiv = document.getElementById('cartItems');
+                const cartTotalDiv = document.getElementById('cartTotal');
+                const checkoutBtn = document.getElementById('checkoutBtn');
+
+                if (cart.length === 0) {
+                    cartItemsDiv.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">Seu carrinho está vazio</p>';
+                    cartTotalDiv.innerHTML = '';
+                    checkoutBtn.style.display = 'none';
+                    return;
+                }
+
+                let html = '';
+                let total = 0;
+
+                cart.forEach((item, index) => {
+                    const subtotal = item.produto.preco * item.quantidade;
+                    total += subtotal;
+
+                    html += `
+                        <div class="cart-item">
+                            <div class="cart-item-info">
+                                <h4>${item.produto.nome}</h4>
+                                <div class="cart-item-price">R$ ${parseFloat(item.produto.preco).toFixed(2)} cada</div>
+                                <div style="margin-top: 10px;">
+                                    <textarea placeholder="Observações (opcional)" onchange="updateObservation(${index}, this.value)" style="width: 100%; height: 60px; resize: vertical;">${item.observacao}</textarea>
+                                </div>
+                            </div>
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                                <div class="quantity-controls">
+                                    <button class="qty-btn" onclick="changeQuantity(${index}, -1)">−</button>
+                                    <span class="quantity">${item.quantidade}</span>
+                                    <button class="qty-btn" onclick="changeQuantity(${index}, 1)">+</button>
+                                </div>
+                                <div style="font-weight: bold; color: #27ae60;">R$ ${subtotal.toFixed(2)}</div>
+                                <button class="remove-btn" onclick="removeFromCart(${index})">Remover</button>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                cartItemsDiv.innerHTML = html;
+                cartTotalDiv.innerHTML = `Total: R$ ${total.toFixed(2)}`;
+                checkoutBtn.style.display = 'block';
+            }
+
+            // Alterar quantidade
+            function changeQuantity(index, delta) {
+                cart[index].quantidade += delta;
+                if (cart[index].quantidade <= 0) {
+                    cart.splice(index, 1);
+                }
+                updateCartCount();
+                displayCartItems();
+            }
+
+            // Remover do carrinho
+            function removeFromCart(index) {
+                cart.splice(index, 1);
+                updateCartCount();
+                displayCartItems();
+            }
+
+            // Atualizar observação
+            function updateObservation(index, observation) {
+                cart[index].observacao = observation;
+            }
+
+            // Mostrar formulário de checkout
+            function showCheckoutForm() {
+                document.getElementById('checkoutForm').style.display = 'block';
+                document.getElementById('checkoutBtn').style.display = 'none';
+            }
+
+            // Fazer pedido
+            async function makeOrder() {
+                const nome = document.getElementById('customerName').value.trim();
+                const telefone = document.getElementById('customerPhone').value.trim();
+
+                if (!nome || !telefone) {
+                    alert('Por favor, preencha todos os campos obrigatórios.');
+                    return;
+                }
+
+                const orderData = {
+                    nome: nome,
+                    telefone: telefone,
+                    itens: cart.map(item => ({
+                            produtoId: item.produtoId,
+                            quantidade: item.quantidade,
+                            observacao: item.observacao
+                        }))
+                };
+
+                try {
+                    const response = await fetch('http://localhost:8080/pedido', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(orderData)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Erro HTTP: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    showSuccessModal(result);
+
+                    // Limpar carrinho
+                    cart = [];
+                    updateCartCount();
+                    closeCart();
+
+                } catch (error) {
+                    console.error('Erro ao fazer pedido:', error);
+                    alert('Erro ao processar pedido. Tente novamente.');
+                }
+            }
+
+            // Mostrar modal de sucesso
+            function showSuccessModal(orderData) {
+                const orderDetailsDiv = document.getElementById('orderDetails');
+                orderDetailsDiv.innerHTML = `
+                    <h3>Detalhes do Pedido</h3>
+                    <p><strong>Número do Pedido:</strong> ${orderData.numero || orderData.id}</p>
+                    <p><strong>Nome:</strong> ${orderData.nome}</p>
+                    <p><strong>Telefone:</strong> ${orderData.telefone}</p>
+                    <p><strong>Status:</strong> Confirmado</p>
+                    <p style="margin-top: 15px; color: #666;">
+                        Seu pedido foi confirmado! Em breve entraremos em contato pelo telefone informado.
+                    </p>
+                `;
+                document.getElementById('successModal').style.display = 'block';
+            }
+
+            // Fechar modal de sucesso
+            function closeSuccessModal() {
+                document.getElementById('successModal').style.display = 'none';
+                // Limpar formulário
+                document.getElementById('customerName').value = '';
+                document.getElementById('customerPhone').value = '';
+            }
+
+            // Fechar modais quando clicar fora
+            window.onclick = function (event) {
+                const cartModal = document.getElementById('cartModal');
+                const successModal = document.getElementById('successModal');
+
+                if (event.target === cartModal) {
+                    closeCart();
+                }
+                if (event.target === successModal) {
+                    closeSuccessModal();
+                }
+            }
+
+            // Carregar produtos ao iniciar a página
+            window.onload = function () {
+                loadCategories();
+                loadProducts();
+            };
+        </script>
+    </body>
+</html>
