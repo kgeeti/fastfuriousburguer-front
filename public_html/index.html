@@ -128,7 +128,7 @@
                 });
             }
 
-// Carregar categorias da API
+            // Carregar categorias da API
             async function loadCategories() {
                 try {
                     const response = await fetch('http://localhost:8080/faf/produto/categoria');
@@ -155,7 +155,8 @@
                 allTab.innerHTML = `
                 <span>🍽️</span>
                 <span>Todos</span>
-            `;
+                `;
+                
                 allTab.onclick = () => selectCategory('todos');
                 tabsContainer.appendChild(allTab);
 
