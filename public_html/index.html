@@ -165,10 +165,10 @@
                     const tab = document.createElement('div');
                     tab.className = 'category-tab';
                     tab.innerHTML = `
-                    <img src="${category.linkImagem}" alt="${category.nome}" class="category-icon" onerror="this.style.display='none'">
-                    <span>${category.nome}</span>
+                    <span>🍽️</span>
+                    <span>${category}</span>
                 `;
-                    tab.onclick = () => selectCategory(category.nome);
+                    tab.onclick = () => selectCategory(category);
                     tabsContainer.appendChild(tab);
                 });
             }
@@ -190,14 +190,14 @@
                 try {
                     if (categoryName === 'todos') {
                         // Carregar todos os produtos
-                        const response = await fetch('http://localhost:8080/produto');
+                        const response = await fetch('http://localhost:8080/faf/produto');
                         if (!response.ok) {
                             throw new Error(`Erro HTTP: ${response.status}`);
                         }
                         products = await response.json();
                     } else {
                         // Carregar produtos por categoria
-                        const response = await fetch(`http://localhost:8080/produto/cat/${encodeURIComponent(categoryName)}`);
+                        const response = await fetch(`http://localhost:8080/faf/produto/cat/${encodeURIComponent(categoryName)}`);
                         if (!response.ok) {
                             throw new Error(`Erro HTTP: ${response.status}`);
                         }
@@ -363,7 +363,7 @@
                 };
 
                 try {
-                    const response = await fetch('http://localhost:8080/pedido', {
+                    const response = await fetch('http://localhost:8080/faf/pedido', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
