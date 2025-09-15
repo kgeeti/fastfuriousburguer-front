@@ -385,6 +385,25 @@ body {
     text-align: left;
 }
 
+.category-tab {
+    background: #E8F5FF;
+    padding: 5px;
+    border: 10px solid transparent;
+    border-radius: 50px;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin: 10px 10px;
+    text-align: left;
+    font-family: 'Consolas';
+    text-transform: capitalize;
+    
+}
+
+.categories-tabs {
+    
+}
+
 @media (max-width: 768px) {
     .products-grid {
         grid-template-columns: 1fr;

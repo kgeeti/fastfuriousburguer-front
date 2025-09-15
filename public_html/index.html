@@ -131,7 +131,7 @@
             // Carregar categorias da API
             async function loadCategories() {
                 try {
-                    const response = await fetch('http://localhost:8080/faf/produto/categoria');
+                    const response = await fetch('http://localhost:8080/faf/produto/categorias');
                     if (!response.ok) {
                         throw new Error(`Erro HTTP: ${response.status}`);
                     }
@@ -166,9 +166,9 @@
                     tab.className = 'category-tab';
                     tab.innerHTML = `
                     <span>🍽️</span>
-                    <span>${category}</span>
+                    <span>${category.categoria.toLowerCase()}</span>
                 `;
-                    tab.onclick = () => selectCategory(category);
+                    tab.onclick = () => selectCategory(category.categoria);
                     tabsContainer.appendChild(tab);
                 });
             }
